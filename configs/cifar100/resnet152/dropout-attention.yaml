@@ -1,0 +1,17 @@
+_BASE_: ./configs/base.yaml
+
+CONFIG:
+    DATA_NAME: CIFAR100
+    MODEL_NAME: RESNET
+    DEPTH: 152
+
+    CONV_BIAS: False
+
+    DROPOUT_TYPE: ATT
+    DROPOUT_RATIO: 0.3
+
+
+    RECONSTRUCT: False
+
+    RECONSTRUCT_MSE_LOSS: False
+    RECONSTRUCT_CE_LOSS: False

@@ -1,0 +1,16 @@
+_BASE_: ./configs/pyramid.yaml
+
+CONFIG:
+    DATA_NAME: CIFAR100
+    MODEL_NAME: PYRAMIDNET
+    DEPTH: 200
+    ALPHA: 240
+
+    CONV_BIAS: False
+
+    DROPOUT_TYPE: BASIC
+    DROPOUT_RATIO: 0.5
+
+    RECONSTRUCT: True
+    RECONSTRUCT_MSE_LOSS: False
+    RECONSTRUCT_CE_LOSS: False
