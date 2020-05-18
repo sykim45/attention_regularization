@@ -165,6 +165,17 @@ def train_iter(epoch, net, criterion, loader, use_cuda, cfg, writer=None):
                 outputs = net(inputs)
                 loss = criterion(outputs, targets)  # Loss
 
+        elif cfg['CONFIG']['RECONSTRUCT'] and cfg['CONFIG']['DROPOUT_TYPE'] == 'NOISE':
+            if torch.bernoulli(0.5 * torch.ones(1)):
+                rand_idx = torch.randperm(inputs.size()[0]).cuda()
+                outputs, mix_ratio = net(inputs, rand_idx)
+                target_f = targets[rand_idx]
+                # loss = criterion(outputs, targets)*(1-cfg['CONFIG']['DROPOUT_RATIO']) + criterion(outputs, target_f)*cfg['CONFIG']['DROPOUT_RATIO']
+                loss = criterion(outputs, targets) * (1 - mix_ratio) + criterion(outputs, target_f) * mix_ratio
+            else:
+                outputs = net(inputs)
+                loss = criterion(outputs, targets)  # Loss
+
         elif cfg['CONFIG']['RECONSTRUCT'] and cfg['CONFIG']['DROPOUT_TYPE']=='RANDOM':
             if torch.bernoulli(0.5 * torch.ones(1)):
                 rand_idx = torch.randperm(inputs.size()[0]).cuda()

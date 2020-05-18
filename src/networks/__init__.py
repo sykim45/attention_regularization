@@ -10,6 +10,7 @@ from .resnet.noise_reconstruct import ResNet_noise_reconstruct
 from .pyramidnet.base import PyramidNet
 from .pyramidnet.cutmix import PyramidNet_cutmix
 from .pyramidnet.high_reconstruct import PyramidNet_high_reconstruct
+from .pyramidnet.noise_reconstruct import PyramidNet_noise_reconstruct
 #from .mlp.guided import MLP_guided
 #from .mlp.base import MLP
 #from .mlp.dropout import MLP_dropout

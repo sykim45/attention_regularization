@@ -9,6 +9,65 @@ cifar100_pyramidnet200_high_reconstruct_train:
 		--fc_init kaiming \
 		--dataset cifar100
 
+cifar100_pyramidnet200_cutmix_train:
+	CUDA_VISIBLE_DEVICES='1' \
+	python src/main.py \
+		--net_type pyramidnet \
+		--model reconstruct \
+		--dropout_type basic \
+		--depth 200 \
+		--conv_init MSR \
+		--fc_init kaiming \
+		--dataset cifar100
+
+cifar100_pyramidnet200_noise_reconstruct_train:
+	CUDA_VISIBLE_DEVICES='1' \
+	python src/main.py \
+		--net_type pyramidnet \
+		--model reconstruct \
+		--dropout_type noise \
+		--depth 200 \
+		--conv_init MSR \
+		--fc_init kaiming \
+		--dataset cifar100
+
+cifar100_pyramidnet200_high_reconstruct_test:
+	CUDA_VISIBLE_DEVICES='0' \
+	python src/main.py \
+		--net_type pyramidnet \
+		--model reconstruct \
+		--dropout_type high \
+		--depth 200 \
+		--conv_init MSR \
+		--fc_init kaiming \
+		--dataset cifar100 \
+		--testOnly
+
+cifar100_pyramidnet200_cutmix_test:
+	CUDA_VISIBLE_DEVICES='0' \
+	python src/main.py \
+		--net_type pyramidnet \
+		--model reconstruct \
+		--dropout_type basic \
+		--depth 200 \
+		--conv_init MSR \
+		--fc_init kaiming \
+		--dataset cifar100 \
+		--testOnly
+
+cifar100_pyramidnet200_noise_reconstruct_test:
+	CUDA_VISIBLE_DEVICES='0' \
+	python src/main.py \
+		--net_type pyramidnet \
+		--model reconstruct \
+		--dropout_type noise \
+		--depth 200 \
+		--conv_init MSR \
+		--fc_init kaiming \
+		--dataset cifar100 \
+		--testOnly
+
+
 cifar100_resnet18_train:
 	CUDA_VISIBLE_DEVICES='0' \
 	python src/main.py \

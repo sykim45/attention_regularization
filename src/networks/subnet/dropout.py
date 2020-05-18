@@ -159,15 +159,16 @@ class StochasticReconstruct(nn.Module):
 
 
 class DetectionMix(nn.Module):
-    def __init__(self, weight_matrix, bias, drop_rate, device):
+    def __init__(self, weight_matrix, bias, drop_rate, device, mode='max'):
         super(DetectionMix, self).__init__()
         self.weight = weight_matrix
         self.device = device
         self.p = drop_rate
         self.bias = bias
+        self.mode = mode
 
     def extra_repr(self):
-        return 'p={}'.format(self.p)
+        return 'p={}, mode={}'.format(self.p, self.mode)
 
     def _discriminative_idx(self, features, outputs, rate=None):
         h_x = F.softmax(outputs, dim=1).data.squeeze()
@@ -211,15 +212,16 @@ class DetectionMix(nn.Module):
 
 
 class RmNoiseMix(nn.Module):
-    def __init__(self, weight_matrix, bias, drop_rate, device):
+    def __init__(self, weight_matrix, bias, drop_rate, device, mode='mean'):
         super(RmNoiseMix, self).__init__()
         self.weight = weight_matrix
         self.device = device
         self.p = drop_rate
         self.bias = bias
+        self.mode = mode
 
     def extra_repr(self):
-        return 'p={}'.format(self.p)
+        return 'p={}, mode={}'.format(self.p, self.mode)
 
     def _discriminative_idx(self, features, outputs, rate=None):
         h_x = F.softmax(outputs, dim=1).data.squeeze()
@@ -245,7 +247,7 @@ class RmNoiseMix(nn.Module):
         max = cnt.max()
         mean = torch.mean(cnt)
         mode = torch.mode(cnt)
-        return mean / cam_weight.size(1)
+        return max / cam_weight.size(1)
 
     def forward(self, features, features_f, output, output_f):
         idx, topk_idx, mix_ratio = self._discriminative_idx(features, output)

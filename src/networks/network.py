@@ -29,11 +29,14 @@ def getNetwork(cfg):
                 net = PyramidNet_cutmix(depth, model_cfg['ALPHA'], num_classes, is_imagenet)
                 file_name = 'pyramid-{}-cutmix-{}'.format(str(depth), suffix)
 
-        elif dropout_type == 'BASIC_DROPOUT':
+        elif dropout_type == 'NOISE':
             # >>> random reconstruction
             if (model_name == 'RESNET'):
-                net = ResNet_cutmix_dropout(depth, num_classes, drop_ratio, is_imagenet)
-                file_name = 'resnet-{}-cutmixdropout'.format(str(depth))
+                net = ResNet_noise_reconstruct(depth, num_classes, drop_ratio, is_imagenet)
+                file_name = 'resnet-{}-noise-reconstruct'.format(str(depth))
+            elif (model_name == "PYRAMIDNET"):
+                net = PyramidNet_noise_reconstruct(depth, model_cfg['ALPHA'], num_classes, is_imagenet)
+                file_name = 'pyramid-{}-noise-reconstruct'.format(str(depth))
 
         elif dropout_type == 'ATT':
             # >>> att drop reconstruction
@@ -52,7 +55,7 @@ def getNetwork(cfg):
 
         elif dropout_type == 'HIGH':
             # >>> guided reconstruction
-            if (model_name == 'RESNET'):
+            if model_name == 'RESNET':
                 net = ResNet_high_reconstruct(depth, num_classes, drop_ratio, is_imagenet)
                 # net_D = AttentionDropout(64*width, 64*width, is_imagenet)
                 # net_R = ReconstructNet(64*width, 64*width)
