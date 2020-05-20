@@ -7,6 +7,7 @@ import torch.optim as optim
 import torch.nn.functional as F
 import torch.nn as nn
 from torch.utils.tensorboard import SummaryWriter
+from networks.simclr.simclr_utils import SupConLoss, NTXentLoss
 
 import time
 import os
@@ -16,79 +17,71 @@ import sys
 # >>> function for train / test
 ######################################################################################
 # >>> train
-def train_multi(epoch, net, net_D, net_R, criterion, loader, use_cuda, cfg):
+def train_multi(epoch, net, net_S, criterion, loader, use_cuda, cfg):
     net.train()
     net.training = True
 
     train_loss = 0
-    D_loss = 0
-    R_loss = 0
-    M_loss = 0
+    E_loss = 0
+    S_loss = 0
     correct = 0
     total = 0
 
-    optimizer   = optim.SGD(net.parameters(), lr=learning_rate(epoch, cfg), momentum=0.9,\
+    optimizer = optim.SGD(net.parameters(), lr=learning_rate(epoch, cfg), momentum=0.9,\
                             weight_decay=cfg['BASE']['SOLVER']['WEIGHT_DECAY'])
-    #optimizer_D = optim.SGD(net_D.parameters(), lr=learning_rate(epoch, cfg), momentum=0.9,\
-    #                        weight_decay=cfg['BASE']['SOLVER']['WEIGHT_DECAY'])
+    #optimizer_S = optim.SGD(net_S.parameters(), lr=learning_rate(epoch, cfg), momentum=0.9,\
+     #                       weight_decay=cfg['BASE']['SOLVER']['WEIGHT_DECAY'])
     #optimizer_R = optim.SGD(net_R.parameters(), lr=learning_rate(epoch, cfg), momentum=0.9,\
     #                        weight_decay=cfg['BASE']['SOLVER']['WEIGHT_DECAY'])
 
-    optimizer_D = optim.Adam(net_D.parameters(), lr=1e-3, weight_decay=cfg['BASE']['SOLVER']['WEIGHT_DECAY'])
-    optimizer_R = optim.Adam(net_R.parameters(), lr=1e-3, weight_decay=cfg['BASE']['SOLVER']['WEIGHT_DECAY'])
+    optimizer_S = optim.Adam(net_S.parameters(), lr=3e-4, weight_decay=cfg['BASE']['SOLVER']['WEIGHT_DECAY'])
+    #optimizer_R = optim.Adam(net_R.parameters(), lr=1e-3, weight_decay=cfg['BASE']['SOLVER']['WEIGHT_DECAY'])
+    #criterion_S = NTXentLoss(cfg['BASE']['SOLVER']['BATCH_SIZE'], cfg['BASE']['SOLVER']['TEMP'],deivce=torch.device('cuda'))
+    criterion_S = SupConLoss(cfg['BASE']['SOLVER']['TEMP'])
 
     print('\n=> Training Epoch #%d, LR=%.4f' %(epoch, learning_rate(epoch, cfg)))
     for batch_idx, (inputs, targets) in enumerate(loader):
         if use_cuda:
             inputs, targets = inputs.cuda(), targets.cuda() # GPU settings
-        optimizer.zero_grad() # initialize gradient
+        optimizer_S.zero_grad() # initialize gradient
         inputs, targets = Variable(inputs), Variable(targets)
 
-        outputs, input_D, target_R = net(inputs)
+        rand_idx = torch.randperm(inputs.size()[0]).cuda()
+        target_f = targets[rand_idx]
+        # train SIMILARITY
+        h_h, h_l, z_h, z_l, ratio_h, ratio_l = net_S(inputs, rand_idx)
+        ###outputs = net_C(h)
+        z = torch.cat((z_h, z_l), dim=0)
+        labels = torch.cat((targets, targets), dim=0)
+        loss_S = criterion_S(z, labels=labels)  # Loss
+        loss_S.backward(retain_graph=True)  # Backward Propagation
+        optimizer_S.step() # Optimizer update
 
-        loss = criterion(outputs, targets)  # Loss
-        loss.backward(retain_graph=True)  # Backward Propagation
-        optimizer.step() # Optimizer update
-
-        # train D
-        optimizer_D.zero_grad()
-        dropped = net_D(input_D, cfg['CONFIG']['DROPOUT_RATIO']) # Top & Bottom
-        outputs_D, dropped_idx = net(dropped, att_train=True)
-        loss_D = -criterion(outputs_D, targets) # the CE loss should be maximized for the dropout
-        loss_D.backward(retain_graph=True)
-        optimizer_D.step()
-
-        # train R
-        optimizer_R.zero_grad()
-        predict_R = net_R(dropped)
-        loss_R = F.mse_loss(predict_R[dropped_idx], target_R[dropped_idx]) # the target of reconstruction layer is to minimize the MSE loss
-        loss_R.backward(retain_graph=True)
-        optimizer_R.step()
-
-        # train model
+        # train CLASSIFIER
         optimizer.zero_grad()
-        loss_M = criterion(outputs_D, targets) # model should minimize the CE despite the dropout
-        loss_M.backward(retain_graph=True)
-        optimizer.step() # adversarial training
+        outputs_h, outputs_l = net(h_h, h_l) # Top & Bottom
+        loss1 = criterion(outputs_h, targets) * (1 - ratio_h) + criterion(outputs_h, target_f) * ratio_h
+        loss2 = criterion(outputs_l, targets) * (1 - ratio_l) + criterion(outputs_l, target_f) * ratio_l
+        loss = (loss1 + loss2) / 2
+        loss.backward(retain_graph=True)
+        optimizer.step()
 
         train_loss += loss.item()
-        D_loss += loss_D.item()
-        R_loss += loss_R.item()
-        M_loss += loss_M.item()
+        S_loss += loss_S.item()
 
-        _, predicted = torch.max(outputs.data, 1)
-        total += targets.size(0)
-        correct += predicted.eq(targets.data).cpu().sum()
+        _, predicted_h = torch.max(outputs_h.data, 1)
+        _, predicted_l = torch.max(outputs_l.data, 1)
+        total += targets.size(0)*2
+        correct += predicted_h.eq(targets.data).cpu().sum()
+        correct += predicted_l.eq(targets.data).cpu().sum()
         acc = 100.*correct/total
 
         sys.stdout.write('\r')
-        sys.stdout.write('| Epoch [%3d/%3d] Iter[%3d/%3d]\tLoss: %.4f\tD_Loss: %.4f\tR_Loss: %.4f\tM_loss: %.4f\tAcc@1: %.3f%%'
+        sys.stdout.write('| Epoch [%3d/%3d] Iter[%3d/%3d]\tLoss: %.4f\tS_Loss: %.4f\tAcc@1: %.3f%%'
                 %(epoch, cfg['BASE']['SOLVER']['NUM_EPOCHS'], batch_idx+1,
                   (len(loader.dataset)//cfg['BASE']['SOLVER']['BATCH_SIZE'])+1,
                   train_loss/(batch_idx+1),
-                  D_loss/(batch_idx+1),
-                  R_loss/(batch_idx+1),
-                  M_loss/(batch_idx+1),
+                  S_loss/(batch_idx+1),
                   acc))
         sys.stdout.flush()
 
@@ -263,14 +256,14 @@ def val_iter(epoch, net, criterion, loader, checkpoint_dict, use_cuda, cfg, writ
             torch.save(checkpoint_dict, '{}/{}.t7'.format(save_point, checkpoint_dict['file_name']))
 
 # >> trainval
-def trainval_multi(net, netD, netR, trainloader, testloader, cfg, checkpoint_dict, use_cuda):
+def trainval_multi(net, netS, trainloader, testloader, cfg, checkpoint_dict, use_cuda):
     criterion = nn.CrossEntropyLoss()
     elapsed_time = 0
 
     for epoch in range(checkpoint_dict['epoch'], checkpoint_dict['epoch']+cfg['BASE']['SOLVER']['NUM_EPOCHS']):
         start_time = time.time()
 
-        train_multi(epoch, net, netD, netR, criterion, trainloader, use_cuda, cfg)
+        train_multi(epoch, net, netS, criterion, trainloader, use_cuda, cfg)
         val_iter(epoch, net, criterion, testloader, checkpoint_dict, use_cuda, cfg)
         epoch_time = time.time() - start_time
         elapsed_time += epoch_time

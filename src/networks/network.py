@@ -18,7 +18,12 @@ def getNetwork(cfg):
 
     if model_cfg['RECONSTRUCT']:
         # >>> Reconstruction
-        if dropout_type == 'BASIC':
+        if dropout_type == 'SIMCLR':
+            if model_name == 'RESNET':
+                net = SimCLR_LR(depth, num_classes, is_imagenet)
+                file_name = 'resnet-{}-simclr'.format(str(depth))
+
+        elif dropout_type == 'BASIC':
             # >>> random reconstruction
             if (model_name == 'RESNET'):
                 suffix = datetime.datetime.now().strftime("%m%d%_H%M%S")
@@ -27,7 +32,7 @@ def getNetwork(cfg):
             elif (model_name == 'PYRAMIDNET'):
                 suffix = datetime.datetime.now().strftime("%m%d_%H%M%S")
                 net = PyramidNet_cutmix(depth, model_cfg['ALPHA'], num_classes, is_imagenet)
-                file_name = 'pyramid-{}-cutmix-{}'.format(str(depth), suffix)
+                file_name = 'pyramid-{}-cutmix'.format(str(depth))
 
         elif dropout_type == 'NOISE':
             # >>> random reconstruction
@@ -63,7 +68,6 @@ def getNetwork(cfg):
             elif (model_name == 'PYRAMIDNET'):
                 net = PyramidNet_high_reconstruct(depth,model_cfg['ALPHA'],num_classes,drop_ratio,is_imagenet)
                 file_name = 'pyramid-{}-high-reconstruct'.format(str(depth))
-            return net, file_name
         else:
             raise ValueError("DROPOUT_TYPE should be either [BASIC | ATT]")
     else:

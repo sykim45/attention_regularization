@@ -17,7 +17,9 @@ from .pyramidnet.noise_reconstruct import PyramidNet_noise_reconstruct
 #from .mlp.att_reconstruct import MLP_att_reconstruct
 
 from .subnet.dropout import AttentionDropout, CAMDropout, ReconstructDropout, StochasticReconstruct, DetectionMix, RmNoiseMix
-from .subnet.reconstruct import ReconstructNet
+from .subnet.reconstruct import ReconstructNet, HighAttentionMix, LowAttentionMix
 from .subnet.cutmix import CutMix
-from .subnet.block_dropout import CAMBlockDropout
+from .simclr.simclr_utils import NTXentLoss, LogisticRegression, SupConLoss
+from .simclr.simclr import ResNet_simclr, SimCLR_LR
+
 #from .subnet.guided_dropout import GuidedDropout

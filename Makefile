@@ -1,3 +1,14 @@
+cifar10_ours_contrant_train:
+	python src/main.py \
+		--net_type resnet \
+		--model reconstruct \
+		--dropout_type simclr \
+		--depth 50 \
+		--conv_init MSR \
+		--fc_init kaiming \
+		--dataset cifar10
+
+
 cifar100_pyramidnet200_high_reconstruct_train:
 	CUDA_VISIBLE_DEVICES='1' \
 	python src/main.py \
